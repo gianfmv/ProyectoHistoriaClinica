@@ -25,12 +25,12 @@ public class GestionaConsulta {
         this.repositorioConsulta = new Repositorio<>(em, Consultas.class);
     }
 
-    // Método para registrar una nueva consulta
+    // método para registrar una nueva consulta
     public void registrarConsulta(Consultas consulta) {
         repositorioConsulta.guardar(consulta);
     }
 
-    // Método para obtener todas las consultas de un paciente
+    // método select a paciente
     public List<Consultas> obtenerConsultasPorPaciente(Long pacienteId) {
         String jpql = "SELECT c FROM Consulta c WHERE c.paciente.id = :pacienteId";
         Query query = em.createQuery(jpql);
@@ -38,7 +38,7 @@ public class GestionaConsulta {
         return query.getResultList();
     }
 
-    // Método para obtener todas las consultas de un médico
+    // método select a un médico
     public List<Consultas> obtenerConsultasPorMedico(Long medicoId) {
         String jpql = "SELECT c FROM Consulta c WHERE c.medico.id = :medicoId";
         Query query = em.createQuery(jpql);
@@ -46,22 +46,22 @@ public class GestionaConsulta {
         return query.getResultList();
     }
 
-    // Método para obtener una consulta por su ID
+    // método para obtener una consulta por su ID
     public Consultas obtenerConsultaPorId(Long consultaId) {
         return repositorioConsulta.obtenerPorId(consultaId);
     }
 
-    // Método para actualizar una consulta
+    // método para actualizar una consulta
     public void actualizarConsulta(Consultas consulta) {
         repositorioConsulta.actualizar(consulta);
     }
 
-    // Método para eliminar una consulta
+    // método para eliminar una consulta
     public void eliminarConsulta(Long consultaId) {
         repositorioConsulta.eliminar(consultaId);
     }
 
-    // Método para filtrar consultas con Predicate (utilizando Streams)
+    // método para filtrar consultas con Predicate (utilizando Streams)
     public List<Consultas> filtrarConsultas(Predicate<Consultas> criterio) {
         // Obtener todas las consultas
         List<Consultas> consultas = repositorioConsulta.obtenerTodos();
@@ -72,7 +72,7 @@ public class GestionaConsulta {
                         .collect(Collectors.toList());  // Devuelve una lista filtrada
     }
 
-    // Métodos específicos de filtrado
+    // métodos específicos de filtrado
     public List<Consultas> filtrarPorDiagnostico(String diagnostico) {
         return filtrarConsultas(c -> c.getDiagnostico() != null && c.getDiagnostico().contains(diagnostico));
     }

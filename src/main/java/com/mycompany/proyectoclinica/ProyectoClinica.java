@@ -4,10 +4,12 @@
 
 package com.mycompany.proyectoclinica;
 
+import CGenerica.GestionaConsulta;
 import CGenerica.MantenimientoUsuario;
 import Medico.Medico;
 import Paciente.GestionaPaciente;
 import Paciente.Paciente;
+import Tablas.Consultas;
 import Tablas.Usuarios;
 import Usuario.Usuario;
 import Utils.PersisteUsuario;
@@ -15,7 +17,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 import utp.edu.pe.poo.pantalla.Pantalla;
 
@@ -74,15 +78,18 @@ public class ProyectoClinica {
     
     }
     
-    
-    // Método estático para mostrar el menú del médico
-     private static boolean mostrarMenuMedico(Scanner sc, Usuarios medicoLogueado) {
+        // Método estático para mostrar el menú del médico
+    private static boolean mostrarMenuMedico(Scanner sc, Usuarios medicoLogueado) {
         boolean salir = false; // Variable para controlar la salida del menú médico
+        MantenimientoUsuario servicioUsuario = new MantenimientoUsuario(em);
+        GestionaConsulta gestionConsulta = new GestionaConsulta(em);
+
         while (!salir) {
             System.out.println("\n====== Menú Médico ======");
             System.out.println("1. Ver pacientes");
             System.out.println("2. Registrar consulta");
-            System.out.println("3. Cerrar sesión");
+            System.out.println("3. Registrar paciente");
+            System.out.println("4. Cerrar sesión");
             System.out.print("Seleccione una opción: ");
             int opcion = sc.nextInt();
             sc.nextLine();  // Limpiar el buffer
@@ -90,13 +97,17 @@ public class ProyectoClinica {
             switch (opcion) {
                 case 1:
                     System.out.println("Ver pacientes");
-                    // Lógica para mostrar pacientes
+                    verPacientes(servicioUsuario);
                     break;
                 case 2:
                     System.out.println("Registrar consulta");
-                    // Lógica para registrar una consulta
+                    registrarConsulta(sc, medicoLogueado, gestionConsulta);
                     break;
                 case 3:
+                    System.out.println("Registrar paciente");
+                    registrarPaciente(sc, servicioUsuario);
+                    break;
+                case 4:
                     System.out.println("Sesión cerrada.");
                     salir = true;
                     break;
@@ -107,9 +118,65 @@ public class ProyectoClinica {
         return salir;
     }
 
+    // Método para ver pacientes registrados
+    private static void verPacientes(MantenimientoUsuario servicioUsuario) {
+        List<Usuarios> pacientes = servicioUsuario.obtenerTodosUsuarios();
+        System.out.println("Lista de pacientes:");
+        for (Usuarios paciente : pacientes) {
+            if (paciente.getTipo() == Usuarios.TipoUsuario.PACIENTE) {
+                System.out.println(paciente.getNombre() + " " + paciente.getApellido());
+            }
+        }
+    }
+
+    // Método para registrar un nuevo paciente
+    private static void registrarPaciente(Scanner sc, MantenimientoUsuario servicioUsuario) {
+        System.out.print("Ingrese nombre: ");
+        String nombre = sc.nextLine();
+        System.out.print("Ingrese apellido: ");
+        String apellido = sc.nextLine();
+        System.out.print("Ingrese DNI: ");
+        String dni = sc.nextLine();
+        System.out.print("Ingrese contraseña: ");
+        String password = sc.nextLine();
+        System.out.print("Ingrese dirección: ");
+        String direccion = sc.nextLine();
+        System.out.print("Ingrese teléfono: ");
+        String telefono = sc.nextLine();
+
+        // Crear un nuevo paciente
+        Usuarios nuevoPaciente = new Usuarios(nombre, apellido, dni, password, direccion, telefono, Usuarios.TipoUsuario.PACIENTE);
+        servicioUsuario.registrarUsuario(nuevoPaciente);
+        System.out.println("Paciente registrado exitosamente.");
+    }
+
+    // Método para registrar una consulta
+    private static void registrarConsulta(Scanner sc, Usuarios medicoLogueado, GestionaConsulta gestionConsulta) {
+        System.out.print("Ingrese ID del paciente: ");
+        Long pacienteId = sc.nextLong();
+        sc.nextLine();  // Limpiar el buffer
+        System.out.print("Ingrese diagnóstico: ");
+        String diagnostico = sc.nextLine();
+        System.out.print("Ingrese tratamiento: ");
+        String tratamiento = sc.nextLine();
+
+        // Crear consulta
+        Consultas nuevaConsulta = new Consultas(LocalDate.now(), medicoLogueado, obtenerPaciente(pacienteId), diagnostico, tratamiento);
+        gestionConsulta.registrarConsulta(nuevaConsulta);
+        System.out.println("Consulta registrada exitosamente.");
+    }
+
+    // Método para obtener un paciente por su ID
+    private static Usuarios obtenerPaciente(Long pacienteId) {
+        MantenimientoUsuario servicioUsuario = new MantenimientoUsuario(em);
+        return servicioUsuario.obtenerUsuarioPorId(pacienteId);
+    }
+
     // Menú paciente
     private static boolean mostrarMenuPaciente(Scanner sc, Usuarios pacienteLogueado) {
         boolean salir = false; // Variable para controlar la salida del menú paciente
+        GestionaConsulta gestionConsulta = new GestionaConsulta(em); // Para gestionar las consultas del paciente
+
         while (!salir) {
             System.out.println("\n====== Menú Paciente ======");
             System.out.println("1. Ver historial");
@@ -121,7 +188,7 @@ public class ProyectoClinica {
             switch (opcion) {
                 case 1:
                     System.out.println("Ver historial");
-                    // Lógica para mostrar historial del paciente
+                    verHistorialPaciente(pacienteLogueado, gestionConsulta);
                     break;
                 case 2:
                     System.out.println("Sesión cerrada.");
@@ -132,5 +199,24 @@ public class ProyectoClinica {
             }
         }
         return salir;
+    }
+    
+    
+    private static void verHistorialPaciente(Usuarios pacienteLogueado, GestionaConsulta gestionConsulta) {
+    // Recuperamos todas las consultas asociadas al paciente
+    List<Consultas> consultas = gestionConsulta.obtenerConsultasPorPaciente(pacienteLogueado.getId());
+
+    if (consultas.isEmpty()) {
+        System.out.println("No tienes consultas registradas.");
+    } else {
+        System.out.println("Historial de consultas:");
+        for (Consultas consulta : consultas) {
+            System.out.println("Fecha: " + consulta.getFecha());
+            System.out.println("Médico: " + consulta.getMedico().getNombre() + " " + consulta.getMedico().getApellido());
+            System.out.println("Diagnóstico: " + consulta.getDiagnostico());
+            System.out.println("Tratamiento: " + consulta.getTratamiento());
+            System.out.println("--------------------------------------------------");
+        }
+    }
     }
 }
